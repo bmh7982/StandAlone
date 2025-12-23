@@ -1,3 +1,57 @@
-#
+# Keil MDK-ARM Project
+
+# Build Output Directories
 out\
 lst\
+Objects/
+Listings/
+RTE/
+DebugConfig/
+
+# Keil Build Outputs
+*.o
+*.d
+*.crf
+*.lst
+*.map
+*.axf
+*.htm
+*.lnp
+*.sct
+*.dep
+*.bak
+*.ddk
+*.edk
+*.plg
+*.tra
+*.iex
+*.out
+
+# Compiled Binaries
+*.hex
+*.bin
+*.elf
+
+# Keil Project User Settings
+*.uvguix.*
+*.uvoptx
+*_uvoptx.bak
+*_uvguix.bak
+
+# Debug Files
+*.ini
+JLinkLog.txt
+JLinkSettings.ini
+*.dbgconf
+
+# Temporary Files
+*~
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
