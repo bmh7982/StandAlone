@@ -70,8 +70,28 @@ cortex-write/
 │   ├── led_control.h
 │   └── swd_dap.h
 ├── Drivers/                # STM32 HAL 드라이버
-└── startup_stm32f103xb.s   # 스타트업 파일
+└── MDK-ARM/
+    ├── cmsys-load.uvprojx  # Keil 프로젝트 파일
+    └── startup_stm32f103xb.s   # 스타트업 파일
 ```
+
+### 현재 구현 상태 (Step 1 완료)
+
+**완료된 기능:**
+- ✅ 시스템 클록 설정 (72MHz)
+- ✅ GPIO 초기화 (LED, SWD 핀)
+- ✅ USART3 초기화 (9600 baud)
+- ✅ LED 초기화
+- ✅ "READY\r\n" 메시지 전송
+
+**구현 예정:**
+- ⏳ UART 명령 수신 및 파싱 (Step 2)
+- ⏳ SD 카드 및 FatFS (Step 3)
+- ⏳ Intel HEX 파서 (Step 4)
+- ⏳ LED 제어 패턴 (Step 5)
+- ⏳ SWD 프로토콜 (Step 6)
+- ⏳ 플래시 프로그래밍 (Step 7)
+- ⏳ 최종 통합 (Step 8)
 
 ## 빌드 방법
 
