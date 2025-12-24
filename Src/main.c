@@ -37,25 +37,38 @@ int main(void)
   /* Initialize all configured peripherals */
   GPIO_Init();    // MX_GPIO_Init();
   UART_Init();
-  LED_Init();
+  LED_Control_Init();
   SPI_Init();
 
   /* Send READY message via UART */
   const char ready_msg[] = "READY\r\n";
   HAL_UART_Transmit(&huart3, (uint8_t*)ready_msg, sizeof(ready_msg)-1, HAL_MAX_DELAY);
 
+  /* LED Test: Show progress during initialization */
+  LED_Progress();
+  UART_SendString("LED Test: Progress pattern\r\n");
+  HAL_Delay(2000);
+
   /* Initialize SD card */
   UART_SendString("Initializing SD card...\r\n");
   if (SD_Init() != 0) {
     UART_SendString("SD Init failed!\r\n");
+    LED_Error();
+    HAL_Delay(2000);
   } else {
     UART_SendString("SD Init OK\r\n");
 
     /* Mount file system */
     if (SD_Mount() != 0) {
       UART_SendString("SD Mount failed!\r\n");
+      LED_Error();
+      HAL_Delay(2000);
     } else {
       UART_SendString("SD Mount OK\r\n");
+      LED_Success();
+      UART_SendString("LED Test: Success pattern\r\n");
+      HAL_Delay(2000);
+      LED_Idle();
     }
   }
 
@@ -77,11 +90,15 @@ int main(void)
         UART_SendString(filepath);
         UART_SendString("\r\n");
 
+        /* Show progress LED */
+        LED_Progress();
+
         /* Try to open file from SD card */
         FIL file;
         if (SD_OpenFile(filepath, &file) != 0)
         {
           UART_SendString("File not found!\r\n");
+          LED_Error();
           UART_SendResponse(RESP_ERR_FILE_NOT_FOUND);
         }
         else
@@ -98,11 +115,13 @@ int main(void)
           if (HEX_ProcessFile(&file, Test_ProgramCallback) == 0)
           {
             UART_SendString("HEX parsing completed!\r\n");
+            LED_Success();
             UART_SendResponse(RESP_OK);
           }
           else
           {
             UART_SendString("HEX parsing failed!\r\n");
+            LED_Error();
             UART_SendResponse(RESP_ERR_HEX_PARSE);
           }
 
@@ -121,6 +140,9 @@ int main(void)
         UART_SendResponse(RESP_NG);
       }
     }
+
+    /* Update LED states (non-blocking) */
+    LED_Update();
 
     /* Small delay to prevent tight loop */
     HAL_Delay(10);

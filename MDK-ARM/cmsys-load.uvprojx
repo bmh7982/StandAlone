@@ -408,6 +408,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\hex_parser.c</FilePath>
             </File>
+            <File>
+              <FileName>led_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\led_control.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

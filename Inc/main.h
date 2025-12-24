@@ -21,6 +21,7 @@ extern "C" {
 #include "uart.h"
 #include "sd_card.h"
 #include "hex_parser.h"
+#include "led_control.h"
 
 /* Exported types ------------------------------------------------------------*/
 
