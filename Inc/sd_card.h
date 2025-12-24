@@ -94,6 +94,13 @@ int SD_ReadSector(FIL* file, uint8_t* buffer, uint32_t sector_size, uint32_t* by
   */
 int SD_ReadRawSector(uint32_t sector, uint8_t* buffer);
 
+/**
+  * @brief  Rewind file to beginning (reset file pointer)
+  * @param  file: Pointer to file object
+  * @retval None
+  */
+void SD_Rewind(FIL* file);
+
 #ifdef __cplusplus
 }
 #endif

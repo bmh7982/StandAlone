@@ -406,6 +406,17 @@ void SD_CloseFile(FIL* file)
 }
 
 /**
+  * @brief  Rewind file to beginning
+  */
+void SD_Rewind(FIL* file)
+{
+    if (file != NULL) {
+        file->fptr = 0;
+        file->current_sector = 0;  /* Will be recalculated on next read */
+    }
+}
+
+/**
   * @brief  Read sector from file
   */
 int SD_ReadSector(FIL* file, uint8_t* buffer, uint32_t sector_size, uint32_t* bytes_read)

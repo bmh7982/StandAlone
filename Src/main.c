@@ -18,7 +18,7 @@ void GPIO_Init(void);
 void UART_Init(void);
 void LED_Init(void);
 void SPI_Init(void);
-int Test_ProgramCallback(uint32_t addr, uint8_t* data, uint32_t size);
+int Program_Target(const char* filename);
 
 /**
   * @brief  The application entry point.
@@ -121,11 +121,12 @@ int main(void)
     LED_Idle();
   }
 
-  UART_SendString("\r\nReady for commands.\r\n");
+  UART_SendString("\r\nCMSIS-DAP Programmer Ready\r\n");
+  LED_Idle();
 
-  /* Command buffers */
+  /* Command buffer */
   char cmd_buffer[MAX_FILENAME_LEN];
-  char filepath[MAX_FILENAME_LEN];
+  char filename[MAX_FILENAME_LEN];
 
   /* Infinite loop */
   while (1)
@@ -133,57 +134,30 @@ int main(void)
     /* Wait for UART command with 60 second timeout */
     if (UART_ReceiveCommand(cmd_buffer, MAX_FILENAME_LEN, 60000))
     {
-      /* Command received - try to extract file path */
-      if (UART_ExtractFilePath(cmd_buffer, filepath, MAX_FILENAME_LEN))
+      /* Extract filename from command */
+      if (UART_ExtractFilePath(cmd_buffer, filename, MAX_FILENAME_LEN))
       {
-        /* File path extracted successfully */
-        UART_SendString("Opening file: ");
-        UART_SendString(filepath);
-        UART_SendString("\r\n");
-
         /* Show progress LED */
         LED_Progress();
 
-        /* Try to open file from SD card */
-        FIL file;
-        if (SD_OpenFile(filepath, &file) != 0)
+        /* Program target MCU */
+        int result = Program_Target(filename);
+
+        if (result == 0)
         {
-          UART_SendString("File not found!\r\n");
-          LED_Error();
-          UART_SendResponse(RESP_ERR_FILE_NOT_FOUND);
+          /* Programming successful */
+          UART_SendResponse(RESP_OK);
+          LED_Success();
         }
         else
         {
-          /* File opened successfully */
-          UART_SendString("File opened, size: ");
-          char size_str[16];
-          sprintf(size_str, "%lu bytes\r\n", file.fsize);
-          UART_SendString(size_str);
-
-          /* Parse HEX file */
-          UART_SendString("Parsing HEX file...\r\n");
-
-          if (HEX_ProcessFile(&file, Test_ProgramCallback) == 0)
-          {
-            UART_SendString("HEX parsing completed!\r\n");
-            LED_Success();
-            UART_SendResponse(RESP_OK);
-          }
-          else
-          {
-            UART_SendString("HEX parsing failed!\r\n");
-            LED_Error();
-            UART_SendResponse(RESP_ERR_HEX_PARSE);
-          }
-
-          SD_CloseFile(&file);
-
-          /* TODO: In next steps, implement:
-           * 1. Connect to target MCU via SWD
-           * 2. Program target MCU with parsed data
-           * 3. Verify programming
-           */
+          /* Programming failed - error already reported */
+          LED_Error();
         }
+
+        /* Return to idle state after delay */
+        HAL_Delay(2000);
+        LED_Idle();
       }
       else
       {
@@ -201,38 +175,129 @@ int main(void)
 }
 
 /**
-  * @brief  Program callback function for HEX file processing
-  * @param  addr: Base address of data
-  * @param  data: Pointer to data buffer
-  * @param  size: Size of data in bytes
-  * @retval 0 if success, -1 if error
+  * @brief  Main programming function - programs target MCU from HEX file
+  * @param  filename: Path to HEX file on SD card
+  * @retval 0 if success, negative if error
   */
-int Test_ProgramCallback(uint32_t addr, uint8_t* data, uint32_t size)
+int Program_Target(const char* filename)
 {
+  FIL file;
+  int result;
   char msg[64];
 
-  /* Display programming information */
-  sprintf(msg, "Programming @ 0x%08lX, %lu bytes\r\n", addr, size);
+  /* 1. Open HEX file from SD card */
+  UART_SendString("Opening file: ");
+  UART_SendString(filename);
+  UART_SendString("\r\n");
+
+  if (SD_OpenFile(filename, &file) != 0)
+  {
+    UART_SendString("ERROR: File not found!\r\n");
+    UART_SendResponse(RESP_ERR_FILE_NOT_FOUND);
+    return -1;
+  }
+
+  sprintf(msg, "File opened, size: %lu bytes\r\n", file.fsize);
   UART_SendString(msg);
 
-  /* Program flash */
-  if (Flash_Program(addr, data, size) != 0)
+  /* 2. Connect to target via SWD */
+  UART_SendString("Connecting to target...\r\n");
+  if (Target_Connect() != 0)
   {
-    UART_SendString("  ERROR: Program failed!\r\n");
-    return -1;
+    UART_SendString("ERROR: SWD connection failed!\r\n");
+    UART_SendResponse(RESP_ERR_TARGET_CONNECT);
+    SD_CloseFile(&file);
+    return -2;
   }
 
-  /* Verify */
-  if (Flash_Verify(addr, data, size) != 0)
+  /* 3. Detect target MCU */
+  uint32_t idcode;
+  if (Target_Detect(&idcode) != 0)
   {
-    UART_SendString("  ERROR: Verify failed!\r\n");
-    return -1;
+    UART_SendString("ERROR: Target detection failed!\r\n");
+    UART_SendResponse(RESP_ERR_TARGET_CONNECT);
+    SD_CloseFile(&file);
+    return -3;
   }
 
-  UART_SendString("  OK\r\n");
+  MCU_Type_t mcu_type = Target_IdentifyMCU(idcode);
+  sprintf(msg, "Target detected! IDCODE: 0x%08lX\r\n", idcode);
+  UART_SendString(msg);
 
-  /* Update LED periodically */
-  LED_Update();
+  switch (mcu_type)
+  {
+    case MCU_TYPE_CORTEX_M0:
+      UART_SendString("MCU Type: Cortex-M0\r\n");
+      break;
+    case MCU_TYPE_CORTEX_M3:
+      UART_SendString("MCU Type: Cortex-M3\r\n");
+      break;
+    case MCU_TYPE_CORTEX_M4:
+      UART_SendString("MCU Type: Cortex-M4\r\n");
+      break;
+    default:
+      UART_SendString("MCU Type: Unknown\r\n");
+      break;
+  }
+
+  /* 4. Unlock and erase flash */
+  UART_SendString("Unlocking flash...\r\n");
+  if (Flash_Unlock() != 0)
+  {
+    UART_SendString("ERROR: Flash unlock failed!\r\n");
+    UART_SendResponse(RESP_ERR_PROGRAM_FAIL);
+    SD_CloseFile(&file);
+    return -4;
+  }
+
+  UART_SendString("Erasing flash...\r\n");
+  if (Flash_EraseFull() != 0)
+  {
+    UART_SendString("ERROR: Flash erase failed!\r\n");
+    UART_SendResponse(RESP_ERR_PROGRAM_FAIL);
+    Flash_Lock();
+    SD_CloseFile(&file);
+    return -5;
+  }
+
+  /* 5. Program flash from HEX file */
+  UART_SendString("Programming flash...\r\n");
+  result = HEX_ProcessFile(&file, Flash_Program);
+  if (result != 0)
+  {
+    UART_SendString("ERROR: Programming failed!\r\n");
+    UART_SendResponse(RESP_ERR_PROGRAM_FAIL);
+    Flash_Lock();
+    SD_CloseFile(&file);
+    return -6;
+  }
+
+  UART_SendString("Programming completed!\r\n");
+
+  /* 6. Verify flash - rewind file and verify */
+  UART_SendString("Verifying flash...\r\n");
+  SD_Rewind(&file);
+
+  result = HEX_ProcessFile(&file, Flash_Verify);
+  if (result != 0)
+  {
+    UART_SendString("ERROR: Verification failed!\r\n");
+    UART_SendResponse(RESP_ERR_VERIFY_FAIL);
+    Flash_Lock();
+    SD_CloseFile(&file);
+    return -7;
+  }
+
+  UART_SendString("Verification passed!\r\n");
+
+  /* 7. Lock flash and reset target */
+  Flash_Lock();
+  SD_CloseFile(&file);
+
+  UART_SendString("Resetting target...\r\n");
+  Target_Reset();
+
+  UART_SendString("Programming complete!\r\n");
 
   return 0;  /* Success */
 }

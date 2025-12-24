@@ -75,18 +75,9 @@ typedef enum {
 #define FLASH_SR_M4        (FLASH_BASE_M4 + 0x0C)
 #define FLASH_CR_M4        (FLASH_BASE_M4 + 0x10)
 
-/* Flash control register bits (STM32F1) */
-#define FLASH_CR_PG        (1 << 0)   /* Programming */
-#define FLASH_CR_PER       (1 << 1)   /* Page Erase */
-#define FLASH_CR_MER       (1 << 2)   /* Mass Erase */
-#define FLASH_CR_STRT      (1 << 6)   /* Start */
-#define FLASH_CR_LOCK      (1 << 7)   /* Lock */
-
-/* Flash status register bits */
-#define FLASH_SR_BSY       (1 << 0)   /* Busy */
-#define FLASH_SR_PGERR     (1 << 2)   /* Programming error */
-#define FLASH_SR_WRPRTERR  (1 << 4)   /* Write protection error */
-#define FLASH_SR_EOP       (1 << 5)   /* End of operation */
+/* Note: Flash control and status register bit definitions (FLASH_CR_*, FLASH_SR_*)
+ * are provided by STM32 CMSIS headers and have the same bit positions across
+ * F0/F1/F3/F4 families, so we use the definitions from stm32f1xx.h */
 
 /* Exported macro ------------------------------------------------------------*/
 
