@@ -478,3 +478,285 @@ int Target_Reset(void)
 
     return 0;
 }
+
+/* Flash Programming Functions -----------------------------------------------*/
+
+/**
+  * @brief  Read memory from target (32-bit aligned)
+  * @param  address: Memory address to read from
+  * @param  data: Buffer to store read data
+  * @param  size: Number of bytes to read
+  * @retval 0 if success, -1 if error
+  */
+int Target_ReadMemory(uint32_t address, uint8_t* data, uint32_t size)
+{
+    uint32_t value;
+    uint32_t i;
+
+    if (data == NULL || size == 0)
+        return -1;
+
+    /* Configure AP for auto-increment */
+    if (SWD_WriteAP(AP_CSW, 0x23000002) != 0)  /* 32-bit access, auto-increment */
+        return -1;
+
+    /* Set transfer address */
+    if (SWD_WriteAP(AP_TAR, address) != 0)
+        return -1;
+
+    /* Read data */
+    for (i = 0; i < size; i += 4) {
+        if (SWD_ReadAP(AP_DRW, &value) != 0)
+            return -1;
+
+        /* Copy to buffer (handle non-aligned sizes) */
+        for (uint8_t j = 0; j < 4 && (i + j) < size; j++) {
+            data[i + j] = (value >> (j * 8)) & 0xFF;
+        }
+    }
+
+    return 0;
+}
+
+/**
+  * @brief  Write memory to target (32-bit aligned)
+  * @param  address: Memory address to write to
+  * @param  data: Data to write
+  * @param  size: Number of bytes to write
+  * @retval 0 if success, -1 if error
+  */
+int Target_WriteMemory(uint32_t address, uint8_t* data, uint32_t size)
+{
+    uint32_t value;
+    uint32_t i;
+
+    if (data == NULL || size == 0)
+        return -1;
+
+    /* Configure AP for auto-increment */
+    if (SWD_WriteAP(AP_CSW, 0x23000002) != 0)  /* 32-bit access, auto-increment */
+        return -1;
+
+    /* Set transfer address */
+    if (SWD_WriteAP(AP_TAR, address) != 0)
+        return -1;
+
+    /* Write data */
+    for (i = 0; i < size; i += 4) {
+        value = 0;
+        /* Assemble 32-bit word from bytes */
+        for (uint8_t j = 0; j < 4 && (i + j) < size; j++) {
+            value |= ((uint32_t)data[i + j]) << (j * 8);
+        }
+
+        if (SWD_WriteAP(AP_DRW, value) != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+/**
+  * @brief  Wait for flash operation to complete
+  * @param  sr_addr: Flash status register address
+  * @retval 0 if success, -1 if timeout/error
+  */
+static int Flash_WaitBusy(uint32_t sr_addr)
+{
+    uint32_t status;
+    uint32_t timeout = 1000;  /* Timeout counter */
+
+    while (timeout--) {
+        if (Target_ReadMemory(sr_addr, (uint8_t*)&status, 4) != 0)
+            return -1;
+
+        /* Check busy flag */
+        if ((status & FLASH_SR_BSY) == 0)
+            break;
+
+        HAL_Delay(1);
+    }
+
+    if (timeout == 0)
+        return -1;  /* Timeout */
+
+    /* Check for errors */
+    if (status & (FLASH_SR_PGERR | FLASH_SR_WRPRTERR))
+        return -1;
+
+    return 0;
+}
+
+/**
+  * @brief  Unlock flash for programming
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Unlock(void)
+{
+    uint32_t keyr_addr = FLASH_KEYR_M3;  /* Assume M3 for now */
+
+    /* Write unlock keys */
+    if (Target_WriteMemory(keyr_addr, (uint8_t*)&(uint32_t){FLASH_KEY1}, 4) != 0)
+        return -1;
+
+    if (Target_WriteMemory(keyr_addr, (uint8_t*)&(uint32_t){FLASH_KEY2}, 4) != 0)
+        return -1;
+
+    return 0;
+}
+
+/**
+  * @brief  Lock flash after programming
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Lock(void)
+{
+    uint32_t cr_addr = FLASH_CR_M3;
+    uint32_t cr_value = FLASH_CR_LOCK;
+
+    return Target_WriteMemory(cr_addr, (uint8_t*)&cr_value, 4);
+}
+
+/**
+  * @brief  Erase flash page (STM32F1 - 1KB page)
+  * @param  address: Address in the page to erase
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Erase(uint32_t address)
+{
+    uint32_t cr_value;
+
+    /* Set PER bit */
+    cr_value = FLASH_CR_PER;
+    if (Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4) != 0)
+        return -1;
+
+    /* Write page address */
+    if (Target_WriteMemory(FLASH_AR_M3, (uint8_t*)&address, 4) != 0)
+        return -1;
+
+    /* Start erase */
+    cr_value = FLASH_CR_PER | FLASH_CR_STRT;
+    if (Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4) != 0)
+        return -1;
+
+    /* Wait for completion */
+    if (Flash_WaitBusy(FLASH_SR_M3) != 0)
+        return -1;
+
+    /* Clear PER bit */
+    cr_value = 0;
+    return Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4);
+}
+
+/**
+  * @brief  Erase entire flash (mass erase)
+  * @retval 0 if success, -1 if error
+  */
+int Flash_EraseFull(void)
+{
+    uint32_t cr_value;
+
+    /* Set MER bit */
+    cr_value = FLASH_CR_MER;
+    if (Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4) != 0)
+        return -1;
+
+    /* Start erase */
+    cr_value = FLASH_CR_MER | FLASH_CR_STRT;
+    if (Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4) != 0)
+        return -1;
+
+    /* Wait for completion (this can take a while) */
+    if (Flash_WaitBusy(FLASH_SR_M3) != 0)
+        return -1;
+
+    /* Clear MER bit */
+    cr_value = 0;
+    return Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4);
+}
+
+/**
+  * @brief  Program flash memory (half-word programming for STM32F1)
+  * @param  address: Flash address to program (must be half-word aligned)
+  * @param  data: Data to program
+  * @param  size: Number of bytes to program
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Program(uint32_t address, uint8_t* data, uint32_t size)
+{
+    uint32_t cr_value;
+    uint16_t half_word;
+    uint32_t i;
+
+    if (data == NULL || size == 0)
+        return -1;
+
+    /* Set PG bit */
+    cr_value = FLASH_CR_PG;
+    if (Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4) != 0)
+        return -1;
+
+    /* Program half-word by half-word (STM32F1 requires 16-bit writes) */
+    for (i = 0; i < size; i += 2) {
+        /* Assemble half-word */
+        half_word = data[i];
+        if (i + 1 < size)
+            half_word |= ((uint16_t)data[i + 1]) << 8;
+
+        /* Write half-word to flash */
+        if (Target_WriteMemory(address + i, (uint8_t*)&half_word, 2) != 0) {
+            /* Clear PG bit on error */
+            cr_value = 0;
+            Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4);
+            return -1;
+        }
+
+        /* Wait for completion */
+        if (Flash_WaitBusy(FLASH_SR_M3) != 0) {
+            /* Clear PG bit on error */
+            cr_value = 0;
+            Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4);
+            return -1;
+        }
+    }
+
+    /* Clear PG bit */
+    cr_value = 0;
+    return Target_WriteMemory(FLASH_CR_M3, (uint8_t*)&cr_value, 4);
+}
+
+/**
+  * @brief  Verify programmed flash memory
+  * @param  address: Flash address to verify
+  * @param  data: Expected data
+  * @param  size: Number of bytes to verify
+  * @retval 0 if success, -1 if mismatch
+  */
+int Flash_Verify(uint32_t address, uint8_t* data, uint32_t size)
+{
+    uint8_t read_buffer[256];
+    uint32_t i, chunk_size;
+
+    if (data == NULL || size == 0)
+        return -1;
+
+    /* Verify in chunks */
+    for (i = 0; i < size; i += sizeof(read_buffer)) {
+        chunk_size = (size - i) < sizeof(read_buffer) ? (size - i) : sizeof(read_buffer);
+
+        /* Read from flash */
+        if (Target_ReadMemory(address + i, read_buffer, chunk_size) != 0)
+            return -1;
+
+        /* Compare */
+        for (uint32_t j = 0; j < chunk_size; j++) {
+            if (read_buffer[j] != data[i + j]) {
+                /* Mismatch found */
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}

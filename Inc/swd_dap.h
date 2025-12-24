@@ -55,6 +55,39 @@ typedef enum {
 #define IDCODE_CORTEX_M3   0x4BA00477
 #define IDCODE_CORTEX_M4   0x4BA01477
 
+/* Flash registers for STM32F1 (Cortex-M3) */
+#define FLASH_BASE_M3      0x40022000
+#define FLASH_KEYR_M3      (FLASH_BASE_M3 + 0x04)
+#define FLASH_OPTKEYR_M3   (FLASH_BASE_M3 + 0x08)
+#define FLASH_SR_M3        (FLASH_BASE_M3 + 0x0C)
+#define FLASH_CR_M3        (FLASH_BASE_M3 + 0x10)
+#define FLASH_AR_M3        (FLASH_BASE_M3 + 0x14)
+
+/* Flash registers for STM32F0 (Cortex-M0) */
+#define FLASH_BASE_M0      0x40022000
+#define FLASH_KEYR_M0      (FLASH_BASE_M0 + 0x04)
+#define FLASH_SR_M0        (FLASH_BASE_M0 + 0x0C)
+#define FLASH_CR_M0        (FLASH_BASE_M0 + 0x10)
+
+/* Flash registers for STM32F4 (Cortex-M4) */
+#define FLASH_BASE_M4      0x40023C00
+#define FLASH_KEYR_M4      (FLASH_BASE_M4 + 0x04)
+#define FLASH_SR_M4        (FLASH_BASE_M4 + 0x0C)
+#define FLASH_CR_M4        (FLASH_BASE_M4 + 0x10)
+
+/* Flash control register bits (STM32F1) */
+#define FLASH_CR_PG        (1 << 0)   /* Programming */
+#define FLASH_CR_PER       (1 << 1)   /* Page Erase */
+#define FLASH_CR_MER       (1 << 2)   /* Mass Erase */
+#define FLASH_CR_STRT      (1 << 6)   /* Start */
+#define FLASH_CR_LOCK      (1 << 7)   /* Lock */
+
+/* Flash status register bits */
+#define FLASH_SR_BSY       (1 << 0)   /* Busy */
+#define FLASH_SR_PGERR     (1 << 2)   /* Programming error */
+#define FLASH_SR_WRPRTERR  (1 << 4)   /* Write protection error */
+#define FLASH_SR_EOP       (1 << 5)   /* End of operation */
+
 /* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -166,6 +199,67 @@ int Target_HaltCore(void);
   * @retval 0 if success, -1 if error
   */
 int Target_Reset(void);
+
+/**
+  * @brief  Read memory from target
+  * @param  address: Memory address to read from
+  * @param  data: Buffer to store read data
+  * @param  size: Number of bytes to read
+  * @retval 0 if success, -1 if error
+  */
+int Target_ReadMemory(uint32_t address, uint8_t* data, uint32_t size);
+
+/**
+  * @brief  Write memory to target
+  * @param  address: Memory address to write to
+  * @param  data: Data to write
+  * @param  size: Number of bytes to write
+  * @retval 0 if success, -1 if error
+  */
+int Target_WriteMemory(uint32_t address, uint8_t* data, uint32_t size);
+
+/**
+  * @brief  Unlock flash for programming
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Unlock(void);
+
+/**
+  * @brief  Lock flash after programming
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Lock(void);
+
+/**
+  * @brief  Erase flash page/sector
+  * @param  address: Address in the page/sector to erase
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Erase(uint32_t address);
+
+/**
+  * @brief  Erase entire flash (mass erase)
+  * @retval 0 if success, -1 if error
+  */
+int Flash_EraseFull(void);
+
+/**
+  * @brief  Program flash memory
+  * @param  address: Flash address to program
+  * @param  data: Data to program
+  * @param  size: Number of bytes to program
+  * @retval 0 if success, -1 if error
+  */
+int Flash_Program(uint32_t address, uint8_t* data, uint32_t size);
+
+/**
+  * @brief  Verify programmed flash memory
+  * @param  address: Flash address to verify
+  * @param  data: Expected data
+  * @param  size: Number of bytes to verify
+  * @retval 0 if success, -1 if error (mismatch)
+  */
+int Flash_Verify(uint32_t address, uint8_t* data, uint32_t size);
 
 #ifdef __cplusplus
 }

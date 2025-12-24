@@ -201,7 +201,7 @@ int main(void)
 }
 
 /**
-  * @brief  Test callback function for HEX file processing
+  * @brief  Program callback function for HEX file processing
   * @param  addr: Base address of data
   * @param  data: Pointer to data buffer
   * @param  size: Size of data in bytes
@@ -211,25 +211,28 @@ int Test_ProgramCallback(uint32_t addr, uint8_t* data, uint32_t size)
 {
   char msg[64];
 
-  /* Display sector information */
-  sprintf(msg, "Sector @ 0x%08lX, size: %lu bytes\r\n", addr, size);
+  /* Display programming information */
+  sprintf(msg, "Programming @ 0x%08lX, %lu bytes\r\n", addr, size);
   UART_SendString(msg);
 
-  /* Display first 32 bytes of each sector */
-  UART_SendString("First 32 bytes: ");
-  for (uint16_t i = 0; i < 32 && i < size; i++)
+  /* Program flash */
+  if (Flash_Program(addr, data, size) != 0)
   {
-    char hex_str[4];
-    sprintf(hex_str, "%02X ", data[i]);
-    UART_SendString(hex_str);
+    UART_SendString("  ERROR: Program failed!\r\n");
+    return -1;
   }
-  UART_SendString("\r\n");
 
-  /* In actual implementation, this callback would:
-   * 1. Write data to target MCU flash via SWD
-   * 2. Verify the write was successful
-   * 3. Return 0 on success, -1 on error
-   */
+  /* Verify */
+  if (Flash_Verify(addr, data, size) != 0)
+  {
+    UART_SendString("  ERROR: Verify failed!\r\n");
+    return -1;
+  }
+
+  UART_SendString("  OK\r\n");
+
+  /* Update LED periodically */
+  LED_Update();
 
   return 0;  /* Success */
 }
