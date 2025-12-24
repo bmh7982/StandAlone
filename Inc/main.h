@@ -22,6 +22,7 @@ extern "C" {
 #include "sd_card.h"
 #include "hex_parser.h"
 #include "led_control.h"
+#include "swd_dap.h"
 
 /* Exported types ------------------------------------------------------------*/
 

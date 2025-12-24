@@ -72,6 +72,57 @@ int main(void)
     }
   }
 
+  /* Initialize SWD interface */
+  UART_SendString("\r\nInitializing SWD interface...\r\n");
+  SWD_Init();
+  UART_SendString("SWD Init OK\r\n");
+
+  /* Test SWD connection */
+  UART_SendString("Testing SWD connection...\r\n");
+  LED_Progress();
+
+  if (Target_Connect() == 0) {
+    uint32_t idcode = 0;
+    if (Target_Detect(&idcode) == 0) {
+      char msg[64];
+      sprintf(msg, "Target detected! IDCODE: 0x%08lX\r\n", idcode);
+      UART_SendString(msg);
+
+      /* Identify MCU type */
+      MCU_Type_t mcu_type = Target_IdentifyMCU(idcode);
+      switch (mcu_type) {
+        case MCU_TYPE_CORTEX_M0:
+          UART_SendString("MCU Type: Cortex-M0\r\n");
+          break;
+        case MCU_TYPE_CORTEX_M3:
+          UART_SendString("MCU Type: Cortex-M3\r\n");
+          break;
+        case MCU_TYPE_CORTEX_M4:
+          UART_SendString("MCU Type: Cortex-M4\r\n");
+          break;
+        default:
+          UART_SendString("MCU Type: Unknown\r\n");
+          break;
+      }
+
+      LED_Success();
+      HAL_Delay(1000);
+      LED_Idle();
+    } else {
+      UART_SendString("Failed to detect target!\r\n");
+      LED_Error();
+      HAL_Delay(2000);
+      LED_Idle();
+    }
+  } else {
+    UART_SendString("SWD connection failed!\r\n");
+    LED_Error();
+    HAL_Delay(2000);
+    LED_Idle();
+  }
+
+  UART_SendString("\r\nReady for commands.\r\n");
+
   /* Command buffers */
   char cmd_buffer[MAX_FILENAME_LEN];
   char filepath[MAX_FILENAME_LEN];

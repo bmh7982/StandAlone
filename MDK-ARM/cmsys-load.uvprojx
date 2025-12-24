@@ -413,6 +413,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\led_control.c</FilePath>
             </File>
+            <File>
+              <FileName>swd_dap.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\swd_dap.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
