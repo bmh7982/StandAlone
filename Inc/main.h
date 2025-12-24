@@ -20,6 +20,7 @@ extern "C" {
 #include "config.h"
 #include "uart.h"
 #include "sd_card.h"
+#include "hex_parser.h"
 
 /* Exported types ------------------------------------------------------------*/
 

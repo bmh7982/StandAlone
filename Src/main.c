@@ -18,6 +18,7 @@ void GPIO_Init(void);
 void UART_Init(void);
 void LED_Init(void);
 void SPI_Init(void);
+int Test_ProgramCallback(uint32_t addr, uint8_t* data, uint32_t size);
 
 /**
   * @brief  The application entry point.
@@ -91,44 +92,27 @@ int main(void)
           sprintf(size_str, "%lu bytes\r\n", file.fsize);
           UART_SendString(size_str);
 
-          /* Read first sector as test */
-          uint8_t sector_buffer[SECTOR_SIZE];
-          uint32_t bytes_read = 0;
+          /* Parse HEX file */
+          UART_SendString("Parsing HEX file...\r\n");
 
-          if (SD_ReadSector(&file, sector_buffer, SECTOR_SIZE, &bytes_read) == 0)
+          if (HEX_ProcessFile(&file, Test_ProgramCallback) == 0)
           {
-            UART_SendString("First sector read: ");
-            char bytes_str[16];
-            sprintf(bytes_str, "%lu bytes\r\n", bytes_read);
-            UART_SendString(bytes_str);
-
-            /* Display first 64 bytes in hex */
-            UART_SendString("First 64 bytes:\r\n");
-            for (uint16_t i = 0; i < 64 && i < bytes_read; i++)
-            {
-              char hex_str[4];
-              sprintf(hex_str, "%02X ", sector_buffer[i]);
-              UART_SendString(hex_str);
-              if ((i + 1) % 16 == 0)
-                UART_SendString("\r\n");
-            }
-            UART_SendString("\r\n");
+            UART_SendString("HEX parsing completed!\r\n");
+            UART_SendResponse(RESP_OK);
           }
           else
           {
-            UART_SendString("Failed to read sector!\r\n");
+            UART_SendString("HEX parsing failed!\r\n");
+            UART_SendResponse(RESP_ERR_HEX_PARSE);
           }
 
           SD_CloseFile(&file);
 
           /* TODO: In next steps, implement:
-           * 1. Parse HEX file
-           * 2. Program target MCU
+           * 1. Connect to target MCU via SWD
+           * 2. Program target MCU with parsed data
            * 3. Verify programming
            */
-
-          /* For now, send OK response */
-          UART_SendResponse(RESP_OK);
         }
       }
       else
@@ -141,6 +125,40 @@ int main(void)
     /* Small delay to prevent tight loop */
     HAL_Delay(10);
   }
+}
+
+/**
+  * @brief  Test callback function for HEX file processing
+  * @param  addr: Base address of data
+  * @param  data: Pointer to data buffer
+  * @param  size: Size of data in bytes
+  * @retval 0 if success, -1 if error
+  */
+int Test_ProgramCallback(uint32_t addr, uint8_t* data, uint32_t size)
+{
+  char msg[64];
+
+  /* Display sector information */
+  sprintf(msg, "Sector @ 0x%08lX, size: %lu bytes\r\n", addr, size);
+  UART_SendString(msg);
+
+  /* Display first 32 bytes of each sector */
+  UART_SendString("First 32 bytes: ");
+  for (uint16_t i = 0; i < 32 && i < size; i++)
+  {
+    char hex_str[4];
+    sprintf(hex_str, "%02X ", data[i]);
+    UART_SendString(hex_str);
+  }
+  UART_SendString("\r\n");
+
+  /* In actual implementation, this callback would:
+   * 1. Write data to target MCU flash via SWD
+   * 2. Verify the write was successful
+   * 3. Return 0 on success, -1 on error
+   */
+
+  return 0;  /* Success */
 }
 
 /**

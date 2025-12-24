@@ -403,6 +403,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\sd_card.c</FilePath>
             </File>
+            <File>
+              <FileName>hex_parser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\hex_parser.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
