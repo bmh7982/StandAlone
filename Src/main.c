@@ -31,7 +31,7 @@ int main(void)
   System_Clock_Config();
 
   /* Initialize all configured peripherals */
-  GPIO_Init();
+  GPIO_Init();    // MX_GPIO_Init();
   UART_Init();
   LED_Init();
 

@@ -3,6 +3,7 @@
 # Build Output Directories
 out\
 lst\
+bak/
 Objects/
 Listings/
 RTE/

@@ -4,8 +4,8 @@
   * @brief          : System initialization functions
   ******************************************************************************
   */
-
 #include "main.h"
+
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart3;
@@ -72,7 +72,7 @@ void GPIO_Init(void)
 
   /* Configure SWD pins (PA2, PA4, PA6) as output */
   GPIO_InitStruct.Pin = SWDIO_PIN | SWCLK_PIN | SWRST_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(SWDIO_PORT, &GPIO_InitStruct);

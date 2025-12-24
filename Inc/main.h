@@ -14,6 +14,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_def.h"
+#include "stm32f1xx_hal_uart.h"
 #include "config.h"
 
 /* Exported types ------------------------------------------------------------*/

@@ -8,18 +8,13 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-/* UART Configuration */
-#define UART_BAUDRATE           9600
+#include "stm32f1xx_hal_conf.h"
 
-/* File System Configuration */
-#define SECTOR_SIZE             512
-#define MAX_FILENAME_LEN        128
-
-/* LED Pin Definitions */
-#define LED1_PIN                GPIO_PIN_12
-#define LED1_PORT               GPIOB
-#define LED2_PIN                GPIO_PIN_13
-#define LED2_PORT               GPIOB
+// UART Pin Definitions (USART3)
+#define UART_TX_PIN             GPIO_PIN_10
+#define UART_TX_PORT            GPIOB
+#define UART_RX_PIN             GPIO_PIN_11
+#define UART_RX_PORT            GPIOB
 
 /* SWD Pin Definitions */
 #define SWDIO_PIN               GPIO_PIN_2
@@ -29,10 +24,30 @@
 #define SWRST_PIN               GPIO_PIN_6
 #define SWRST_PORT              GPIOA
 
-/* UART Pin Definitions (USART3) */
-#define UART_TX_PIN             GPIO_PIN_10
-#define UART_TX_PORT            GPIOB
-#define UART_RX_PIN             GPIO_PIN_11
-#define UART_RX_PORT            GPIOB
+// LED Pin Definitions
+#define LED1_PIN                GPIO_PIN_12
+#define LED1_PORT               GPIOB
+#define LED2_PIN                GPIO_PIN_13
+#define LED2_PORT               GPIOB
+
+// SD Card and File System
+#define SECTOR_SIZE             512
+
+// File System Configuration
+#define MAX_FILENAME_LEN        128
+
+// UART Configuration
+#define UART_BAUDRATE           9600
+#define UART_INSTANCE           USART3
+
+/* UART Response Codes */
+#define RESP_OK                 "OK\r\n"
+#define RESP_NG                 "NG\r\n"
+#define RESP_ERR_SD_MOUNT       "ERR_SD_MOUNT\r\n"
+#define RESP_ERR_FILE_NOT_FOUND "ERR_FILE_NOT_FOUND\r\n"
+#define RESP_ERR_HEX_PARSE      "ERR_HEX_PARSE\r\n"
+#define RESP_ERR_TARGET_CONNECT "ERR_TARGET_CONNECT\r\n"
+#define RESP_ERR_PROGRAM_FAIL   "ERR_PROGRAM_FAIL\r\n"
+#define RESP_ERR_VERIFY_FAIL    "ERR_VERIFY_FAIL\r\n"
 
 #endif /* __CONFIG_H */
