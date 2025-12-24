@@ -16,8 +16,10 @@ extern "C" {
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_def.h"
 #include "stm32f1xx_hal_uart.h"
+#include "stm32f1xx_hal_spi.h"
 #include "config.h"
 #include "uart.h"
+#include "sd_card.h"
 
 /* Exported types ------------------------------------------------------------*/
 
