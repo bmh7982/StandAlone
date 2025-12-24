@@ -39,13 +39,43 @@ int main(void)
   const char ready_msg[] = "READY\r\n";
   HAL_UART_Transmit(&huart3, (uint8_t*)ready_msg, sizeof(ready_msg)-1, HAL_MAX_DELAY);
 
+  /* Command buffers */
+  char cmd_buffer[MAX_FILENAME_LEN];
+  char filepath[MAX_FILENAME_LEN];
+
   /* Infinite loop */
   while (1)
   {
-    /* Main loop - waiting for commands */
-    /* TODO: Implement command processing in next steps */
+    /* Wait for UART command with 60 second timeout */
+    if (UART_ReceiveCommand(cmd_buffer, MAX_FILENAME_LEN, 60000))
+    {
+      /* Command received - try to extract file path */
+      if (UART_ExtractFilePath(cmd_buffer, filepath, MAX_FILENAME_LEN))
+      {
+        /* File path extracted successfully - echo it back for testing */
+        UART_SendString("Received file: ");
+        UART_SendString(filepath);
+        UART_SendString("\r\n");
 
-    HAL_Delay(100);
+        /* TODO: In next steps, implement:
+         * 1. Open file from SD card
+         * 2. Parse HEX file
+         * 3. Program target MCU
+         * 4. Send appropriate response code
+         */
+
+        /* For now, send OK response */
+        UART_SendResponse(RESP_OK);
+      }
+      else
+      {
+        /* Invalid command format */
+        UART_SendResponse(RESP_NG);
+      }
+    }
+
+    /* Small delay to prevent tight loop */
+    HAL_Delay(10);
   }
 }
 

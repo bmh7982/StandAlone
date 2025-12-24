@@ -17,6 +17,7 @@ extern "C" {
 #include "stm32f1xx_hal_def.h"
 #include "stm32f1xx_hal_uart.h"
 #include "config.h"
+#include "uart.h"
 
 /* Exported types ------------------------------------------------------------*/
 
